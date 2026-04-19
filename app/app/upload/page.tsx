@@ -42,11 +42,13 @@ export default function UploadPage() {
         )}
 
         <button
-          disabled={!fileName}
-          className="mt-8 w-full bg-blue-600 disabled:bg-blue-300 text-white py-3 rounded-full font-medium transition"
-        >
-          Continue
-        </button>
+  disabled={!fileName}
+  onClick={() => window.location.href = "/process"}
+  className="mt-8 w-full bg-blue-600 disabled:bg-blue-300 text-white py-3 rounded-full font-medium transition"
+>
+  Continue
+</button>
+
       </main>
     </div>
   );
