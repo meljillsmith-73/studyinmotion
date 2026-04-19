@@ -17,7 +17,7 @@ export default function Home() {
 
         {/* Upload Button */}
         <a
-          href="#"
+          href="/upload"
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-4 rounded-full transition-colors"
         >
           Upload PDF
