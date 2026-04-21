@@ -13,6 +13,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // Upload to Vercel Blob
     const blob = await put(`pdfs/${file.name}`, file, {
       access: "public",
     });
@@ -28,3 +29,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
