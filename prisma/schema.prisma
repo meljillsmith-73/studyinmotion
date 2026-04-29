@@ -1,0 +1,43 @@
+datasource db {
+  provider = "postgresql"
+}
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Document {
+  id          String           @id @default(uuid())
+  filename    String
+  blobUrl     String
+  textContent String
+  createdAt   DateTime         @default(now())
+
+  metadata    DocumentMetadata?
+  chunks      DocumentChunk[]
+}
+
+model DocumentMetadata {
+  id         String   @id @default(uuid())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String   @unique
+
+  pageCount  Int?
+  wordCount  Int?
+  title      String?
+  author     String?
+  createdAt  DateTime @default(now())
+}
+
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+
+  chunkIndex Int
+  chunkText  String
+  createdAt  DateTime @default(now())
+
+  @@index([documentId, chunkIndex])
+}
