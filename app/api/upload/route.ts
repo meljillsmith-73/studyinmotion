@@ -6,6 +6,23 @@ import { jsonrepair } from "jsonrepair";
 export const runtime = "nodejs";
 export const maxDuration = 60; 
 
+function sanitizeContent(text: string): string {
+  const legalNoise = [
+    /Copyright Warning Notice/gi,
+    /material is protected by copyright/gi,
+    /educational purposes of the University/gi,
+    /solely for the educational purposes/gi,
+    /Failure to comply with the terms/gi,
+    /expose you to legal action/gi,
+    /reproduce or distribute any part/gi
+  ];
+  let clean = text;
+  legalNoise.forEach(pattern => {
+    clean = clean.replace(pattern, "");
+  });
+  return clean.trim();
+}
+
 export async function POST(req: Request) {
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return NextResponse.json({ error: "API Key missing" }, { status: 500 });
@@ -22,54 +39,35 @@ export async function POST(req: Request) {
 
     const pdfParse = require("pdf-parse-fixed");
     const parsedPdf = await pdfParse(buffer);
-    const cleanText = parsedPdf.text.substring(0, 18000); 
+    const filteredText = sanitizeContent(parsedPdf.text).substring(0, 20000); 
 
     const aiResponse = await anthropic.messages.create({
-      model: "claude-opus-4-7", // Updated to the 2026 Flagship
+      model: "claude-opus-4-7",
       max_tokens: 4000, 
-      system: "You are a Research Synthesis Engine. You MUST return ONLY a raw JSON object. No conversational text, no markdown code blocks.",
+      system: `You are a Research Synthesis Engine. Ignore all legal/copyright notices. Return ONLY a raw JSON object.`,
       messages: [{
         role: "user",
         content: `Analyze this paper. 
-        EXISTING LIBRARY: ${existingKnowledge}
-        TEXT: ${cleanText}
-
-        Return this EXACT JSON structure:
+        TEXT: ${filteredText}
+        Return this EXACT JSON:
         {
           "startPage": number,
           "physicalOffset": number,
           "sections": [{"title": "string", "text": "string", "page": number, "anchorQuote": "string"}],
           "mcqs": [{"question": "string", "options": ["string"], "answer": "string"}],
-          "graph": { 
-             "nodes": [{"id": "string", "label": "string", "page": number, "insight": "string"}], 
-             "crossLinks": [{"sourceLabel": "string", "targetLabel": "string", "reason": "string"}] 
-           }
+          "graph": { "nodes": [{"id": "string", "label": "string", "page": number, "insight": "string"}], "crossLinks": [] }
         }`
       }]
     });
 
     const rawContent = aiResponse.content[0].type === "text" ? aiResponse.content[0].text : "";
-    
-    // BULLETPROOF EXTRACTION: Find the first { and the last }
     const startIndex = rawContent.indexOf('{');
     const endIndex = rawContent.lastIndexOf('}');
-    
-    if (startIndex === -1 || endIndex === -1) {
-      throw new Error("AI failed to return a valid JSON object.");
-    }
-
     const jsonString = rawContent.substring(startIndex, endIndex + 1);
     const data = JSON.parse(jsonrepair(jsonString));
 
-    return NextResponse.json({ 
-      success: true, 
-      pdfUrl: blob.url, 
-      fileName: file.name, 
-      fileId: Math.random().toString(36).substring(7), 
-      ...data 
-    });
+    return NextResponse.json({ success: true, pdfUrl: blob.url, fileName: file.name, fileId: Math.random().toString(36).substring(7), ...data });
   } catch (error: any) {
-    console.error("Server Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
